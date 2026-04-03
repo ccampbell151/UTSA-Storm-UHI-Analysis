@@ -1,3 +1,8 @@
+## Welcome to the python code for Rowdy's Radar Pro.
+## This program will take a batch of radar GeoTIFF images and animate them according to the predefined study area (San Antonio region).
+## It is intended to observe a storm's intensity in relation to localized UHI.
+## Works best with eastward traveling mesoscale systems.
+
 import os                                                                                       ## Allows program to read and write PC files/folder
 import tkinter as tk                                                                            ## For building program window
 from tkinter import filedialog, messagebox, ttk                                                 ## Added features for UI design
