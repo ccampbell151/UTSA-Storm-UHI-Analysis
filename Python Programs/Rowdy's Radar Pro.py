@@ -96,24 +96,24 @@ class UTSARadarUHIDual:
         view_rx, view_ry = 110000, 85000 
         xlim, ylim = [bx_x - view_rx, bx_x + view_rx], [bx_y - view_ry, bx_y + view_ry]
 
-        def process_frame(i):
+        def process_frame(i):                                                                                                                               ## Clears the canvas from the previous frame to create the next in animation                    
             ax_map.clear(); ax_bar.clear(); ax_trend.clear()
             ax_trend.set_visible(True)
             
-            filename = files[i]
+            filename = files[i]                                                                                                                             ## Opens the radar image files
             with rasterio.open(os.path.join(path, filename)) as src:
-                transform, width, height = calculate_default_transform(src.crs, 'EPSG:3857', src.width, src.height, *src.bounds)
+                transform, width, height = calculate_default_transform(src.crs, 'EPSG:3857', src.width, src.height, *src.bounds)                            ## Reprojects the flat map into a 3D Earth Environment
                 data = np.zeros((height, width), dtype=np.float32)
                 reproject(source=rasterio.band(src, 1), destination=data, src_transform=src.transform, 
                           src_crs=src.crs, dst_transform=transform, dst_crs='EPSG:3857', resampling=Resampling.nearest)
                 
-                data[data < 15] = np.nan
+                data[data < 15] = np.nan                                                                                                                    ## Filters out < 15 dBZ on radar images.
                 left, bottom, right, top = rasterio.transform.array_bounds(height, width, transform)
                 
-                ax_map.imshow(data, extent=[left, right, bottom, top], cmap='turbo', vmin=15, vmax=65, 
+                ax_map.imshow(data, extent=[left, right, bottom, top], cmap='turbo', vmin=15, vmax=65,                                                      ## Gives color to the radar 'turbo' color map
                               alpha=0.8, zorder=5, origin='upper', aspect='equal')
                 
-                lon_vals = np.linspace(self.b_lon - 1.0, self.b_lon + 1.0, 7)
+                lon_vals = np.linspace(self.b_lon - 1.0, self.b_lon + 1.0, 7)                                                                               ## Lat/Long grid lines on map
                 lat_vals = np.linspace(self.b_lat - 0.7, self.b_lat + 0.7, 5)
                 pts_lon = gpd.GeoSeries([Point(x, self.b_lat) for x in lon_vals], crs="EPSG:4326").to_crs("EPSG:3857")
                 pts_lat = gpd.GeoSeries([Point(self.b_lon, y) for y in lat_vals], crs="EPSG:4326").to_crs("EPSG:3857")
@@ -121,36 +121,35 @@ class UTSARadarUHIDual:
                 ax_map.set_yticks([p.y for p in pts_lat]); ax_map.set_yticklabels([f"{y:.1f}°N" for y in lat_vals])
                 ax_map.set_xlim(xlim); ax_map.set_ylim(ylim)
                 
-                for boundary in [-25000, 25000]:
+                for boundary in [-25000, 25000]:                                                                                                            ## Created monitoring zones. Upwind, Urban Core and Downwind
                     ax_map.axvline(bx_x + boundary, color='white', linestyle='--', linewidth=1.5, alpha=0.8, zorder=15)
                 
-                ax_map.text(bx_x - 65000, ylim[1] - 15000, "UPWIND", color='white', ha='center', fontweight='bold', fontsize=13, zorder=20)
+                ax_map.text(bx_x - 65000, ylim[1] - 15000, "UPWIND", color='white', ha='center', fontweight='bold', fontsize=13, zorder=20)                 ## Adds labels to the monitoring zone boxes
                 ax_map.text(bx_x, ylim[1] - 15000, "URBAN CORE", color='cyan', ha='center', fontweight='bold', fontsize=13, zorder=20)
                 ax_map.text(bx_x + 65000, ylim[1] - 15000, "DOWNWIND", color='white', ha='center', fontweight='bold', fontsize=13, zorder=20)
                 ax_map.plot(bx_x, bx_y, 'r*', markersize=14, markeredgecolor='white', zorder=25)
 
-                try: cx.add_basemap(ax_map, crs="EPSG:3857", source=cx.providers.CartoDB.DarkMatter, zoom=9, zorder=1)
+                try: cx.add_basemap(ax_map, crs="EPSG:3857", source=cx.providers.CartoDB.DarkMatter, zoom=9, zorder=1)                                      ## Downloads and dark background map
                 except: pass
 
-                zonal_means = [0, 0, 0]
+                zonal_means = [0, 0, 0]                                                                                                                     ## Math for how strong the storm is in each zone (mean intensity)         
                 rows, cols = np.where(~np.isnan(data))
                 if rows.size > 0:
                     xs, ys = transform * (cols, rows)
                     dx, dy = xs - bx_x, ys - bx_y
                     
-                    # RADIAL MATH: Calculate Distance from center (in km)
-                    dists = np.sqrt(dx**2 + dy**2) / 1000.0 
+                    dists = np.sqrt(dx**2 + dy**2) / 1000.0                                                                                                 ## Math that calcultaes the distace of the storm raster from the city center
                     # Store values for the Distance vs Intensity plot
                     for d_val, i_val in zip(dists, data[rows, cols]):
                         distance_data.append({"Dist": d_val, "Intensity": i_val})
 
-                    masks = [(dx < -25000), (dx >= -25000) & (dx < 25000), (dx >= 25000)]
+                    masks = [(dx < -25000), (dx >= -25000) & (dx < 25000), (dx >= 25000)]                                                                   ## Divides the radar image into three zones based on their distance from the city center
                     for idx, m in enumerate(masks):
                         if np.any(m):
                             z_vals = data[rows[m], cols[m]]
-                            zonal_means[idx] = np.mean(z_vals[z_vals >= np.percentile(z_vals, 90)])
+                            zonal_means[idx] = np.mean(z_vals[z_vals >= np.percentile(z_vals, 90)])                                                         ## Calculates the average of the strongest 10% of the radar in that respective zone
 
-                all_stats.append({"Frame": i, "Upwind": zonal_means[0], "Urban": zonal_means[1], "Downwind": zonal_means[2]})
+                all_stats.append({"Frame": i, "Upwind": zonal_means[0], "Urban": zonal_means[1], "Downwind": zonal_means[2]})                               ## Organizes stats for spreadsheet format
                 
                 # Pulse Counter
                 u_val = zonal_means[1]
