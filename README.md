@@ -1,4 +1,4 @@
-# UTSA-Storm-UHI-Analysis
+# UHI and Terrain Effects on Convective Storm Initiation and Evolution Near San Antonio
 Data and visualizations for the UHI and Terrain Effects on Convective Storm Initiation in San Antonio project
 
 ## Contact Me
