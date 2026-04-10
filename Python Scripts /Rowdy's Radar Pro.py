@@ -85,7 +85,7 @@ class UTSARadarUHIDual:
         
         poster_indices = np.linspace(0, len(files) - 1, 6).astype(int) if self.var_poster.get() else []                                                     ## This line starts at image 0 and indexes every 6th image. For exporting the poster figures.
         all_stats = []
-        distance_data = [] # Storage for radial math
+        distance_data = []
 
         fig = plt.figure(figsize=(22, 11), constrained_layout=True)                                                                                         ## Sets the size of the canvas (not the map or graphs)
         gs = fig.add_gridspec(2, 2, width_ratios=[2, 1], height_ratios=[2.5, 1], wspace=0.05)                                                               ## Adds grid space into the canvas.
@@ -139,7 +139,7 @@ class UTSARadarUHIDual:
                     dx, dy = xs - bx_x, ys - bx_y
                     
                     dists = np.sqrt(dx**2 + dy**2) / 1000.0                                                                                                 ## Math that calcultaes the distace of the storm raster from the city center
-                    # Store values for the Distance vs Intensity plot
+                    
                     for d_val, i_val in zip(dists, data[rows, cols]):
                         distance_data.append({"Dist": d_val, "Intensity": i_val})
 
@@ -181,23 +181,22 @@ class UTSARadarUHIDual:
             for i in range(len(files)): process_frame(i)
 
         # DISTANCE VS INTENSITY PLOT
-        if self.var_dist_plot.get() and distance_data:
+        if self.var_dist_plot.get() and distance_data:                                                                                           ## Creates a plot for distance v. intensity
             df_dist = pd.DataFrame(distance_data)
-            # Group into 5km bins
-            df_dist['Dist_Bin'] = (df_dist['Dist'] // 5) * 5
-            bin_means = df_dist.groupby('Dist_Bin')['Intensity'].mean()
+            df_dist['Dist_Bin'] = (df_dist['Dist'] // 5) * 5                                                                                     ## Group into 5km bins
+            bin_means = df_dist.groupby('Dist_Bin')['Intensity'].mean()                                                                          ## Taking the mean smooths out the graph
             
-            plt.figure(figsize=(10, 6))
-            plt.plot(bin_means.index, bin_means.values, color=self.utsa_orange, marker='o', lw=3)
-            plt.axvline(0, color='red', linestyle='--', label='City Center')
+            plt.figure(figsize=(10, 6))                                                                                                          ## Defines the figure size
+            plt.plot(bin_means.index, bin_means.values, color=self.utsa_orange, marker='o', lw=3)                                                ## Draw the line plot with stylization details
+            plt.axvline(0, color='red', linestyle='--', label='City Center')                                                                     ## Red dashed line at zero to indicate city center
             plt.title("Mean Storm Intensity vs. Distance from San Antonio", fontweight='bold')
             plt.xlabel("Distance from City Center (km)"); plt.ylabel("Avg Reflectivity (dBZ)")
-            plt.grid(True, alpha=0.3); plt.legend()
-            plt.savefig(os.path.join(path, "UHI_Distance_Intensity_Profile.png"), dpi=300)
+            plt.grid(True, alpha=0.3); plt.legend()                                                                                              ## Add a grid (alpha change for opacity) and a legend
+            plt.savefig(os.path.join(path, "UHI_Distance_Intensity_Profile.png"), dpi=300)                                                       ## Saves the images with high resolution
 
         df_final = pd.DataFrame(all_stats)
-        if self.var_csv.get(): df_final.to_csv(os.path.join(path, "UHI_Zonal_Telemetry.csv"), index=False)
-        if self.var_plot.get():
+        if self.var_csv.get(): df_final.to_csv(os.path.join(path, "UHI_Zonal_Telemetry.csv"), index=False)                                       ## If user selects to save the CSV telemetry data file
+        if self.var_plot.get():                                                                                                                  ## If user selects to save the final trend plot
             plt.figure(figsize=(14, 7))
             plt.plot(df_final.index, df_final['Upwind'], label='Rural', color='#4a90e2')
             plt.plot(df_final.index, df_final['Urban'], label='Urban Core (UHI)', color=self.utsa_orange, lw=4)
@@ -205,7 +204,7 @@ class UTSARadarUHIDual:
             plt.title("UHI Pulse Analysis - Final Trend"); plt.legend(); plt.grid(True, alpha=0.2)
             plt.savefig(os.path.join(path, "UHI_Final_Trend_Plot.png"), dpi=300)
         
-        plt.close('all'); messagebox.showinfo("Success", "Spatial analysis complete! Added Distance Profile.")
+        plt.close('all'); messagebox.showinfo("Success", "Spatial analysis complete! Added Distance Profile.")                                   ## Success message at end
 
-if __name__ == "__main__":
-    root = tk.Tk(); app = UTSARadarUHIDual(root); root.mainloop()
+if __name__ == "__main__":                                                                                                                       ## Start entire app window
+    root = tk.Tk(); app = UTSARadarUHIDual(root); root.mainloop()                                                                                ## Load code logic and keep open unti user hits the 'x'
